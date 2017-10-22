@@ -1,0 +1,81 @@
+group 'com.example'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'org.junit.platform.gradle.plugin'
+apply plugin: 'nu.studer.jooq'
+
+sourceCompatibility = 1.8
+
+ext.junitPlatformVersion = '1.0.1'
+ext.junitJupiterVersion  = '5.0.1'
+ext.postgreSQLVersion = '42.1.4'
+
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+    dependencies {
+        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.1'
+        classpath 'nu.studer:gradle-jooq-plugin:2.0.9'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    jooqRuntime("org.postgresql:postgresql:${postgreSQLVersion}")
+
+    compile('org.jooq:jooq')
+    compile("org.postgresql:postgresql:${postgreSQLVersion}")
+
+    testCompile("org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}")
+    testCompile('org.apiguardian:apiguardian-api:1.0.0')
+
+    testRuntime("org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}")
+}
+
+mainClassName = "com.example.jooqtest.Application"
+
+jooq {
+    version = '3.10.1'
+    tests(sourceSets.main) {
+        jdbc {
+            driver = 'org.postgresql.Driver'
+            url = 'jdbc:postgresql://localhost:5432/jooqtest'
+            user = 'jooqtest'
+            password = ''
+        }
+        generator {
+            name = 'org.jooq.util.DefaultGenerator'
+            strategy {
+                name = 'org.jooq.util.DefaultGeneratorStrategy'
+            }
+            database {
+                name = 'org.jooq.util.postgres.PostgresDatabase'
+                inputSchema = 'public'
+            }
+            generate {
+                relations = true
+                deprecated = false
+                records = true
+                immutablePojos = true
+                fluentSetters = true
+            }
+            target {
+                packageName = 'com.example.jooqtest.generated'
+                directory = 'src/generated/java'
+            }
+        }
+    }
+}
+
+project.tasks.getByName('clean').dependsOn -= 'cleanGenerateTestsJooqSchemaSource'
+project.tasks.getByName('compileJava').dependsOn -= 'generateTestsJooqSchemaSource'
+project.tasks.getByName('generateTestsJooqSchemaSource').dependsOn += 'cleanGenerateTestsJooqSchemaSource'
